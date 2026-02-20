@@ -9,3 +9,239 @@ generator client {
 datasource db {
   provider = "sqlite"
 }
+
+//////////////////////
+// ENUMS
+//////////////////////
+
+enum Role {
+  WRESTLER
+  BOOKER
+  REFEREE
+  MANAGER
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  NA
+}
+
+enum Alignment {
+  FACE
+  HEEL
+  TWEENER
+}
+
+enum Division {
+  TOP_CARD
+  MID_CARD
+  UNDER_CARD
+  TAG
+}
+
+enum TitleGender {
+  MALE
+  FEMALE
+  ALL
+}
+
+enum ShowType {
+  TV
+  PPV
+}
+
+enum Month {
+  JAN
+  FEB
+  MAR
+  APR
+  MAY
+  JUN
+  JUL
+  AUG
+  SEP
+  OCT
+  NOV
+  DEC
+}
+
+enum MatchType {
+  SINGLES
+  TAG_TEAM
+  TEAM
+  TRIPLE_THREAT
+  FATAL_FOUR_WAY
+  HANDICAP
+  GAUNTLET
+  BATTLE_ROYALE
+  ROYAL_RUMBLE
+}
+
+enum Stipulation {
+  HARDCORE
+  OPEN_CHALLENGE
+  CONFRONTATION
+  BEST_OF_THREE
+  IRONMAN
+  LAST_LAUGH
+  SUBMISSION
+  LAST_MAN_STANDING
+  STREET_FIGHT
+  FIRST_BLOOD
+  SUMO_CONTEST
+  SHOOT_FIGHT
+  TAG_ELIMINATION
+  WAR
+  ELIMINATION
+  ESCAPE_TO_VICTORY
+  FURNITURE_SMASH
+  LADDER
+  HELL_IN_A_CELL
+  TRAINING
+}
+
+enum FinishType {
+  PINFALL
+  SUBMISSION
+  COUNTOUT
+  DQ
+  INTERFERENCE
+  UNIQUE
+  UNFINISHED
+}
+
+//////////////////////
+// CORE MODELS
+//////////////////////
+
+model Character {
+  id           Int          @id @default(autoincrement())
+  name         String
+  role         Role
+  gender       Gender
+  alignment    Alignment
+  division     Division
+  finisherName String?
+  injured      Boolean      @default(false)
+
+  // Faction, TagTeam, Rivalry, Friendship - one-to-many
+  factionId    Int?
+  faction      Faction?     @relation(fields: [factionId], references: [id])
+
+  tagTeamId    Int?
+  tagTeam      TagTeam?     @relation(fields: [tagTeamId], references: [id])
+
+  rivalryId    Int?
+  rivalry      Rivalry?     @relation(fields: [rivalryId], references: [id])
+
+  friendshipId Int?
+  friendship   Friendship?  @relation(fields: [friendshipId], references: [id])
+
+  matchEntries MatchParticipant[]
+  interferences MatchInterference[]
+  titleReigns   TitleReign[]
+
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model Championship {
+  id        Int           @id @default(autoincrement())
+  name      String
+  division  Division
+  gender    TitleGender
+
+  reigns    TitleReign[]
+  matches   Match[]
+}
+
+model TitleReign {
+  id              Int           @id @default(autoincrement())
+  championshipId  Int
+  championship    Championship  @relation(fields: [championshipId], references: [id])
+
+  characterId     Int
+  character       Character     @relation(fields: [characterId], references: [id])
+
+  startDate       DateTime
+  endDate         DateTime?
+  isCurrent       Boolean       @default(true)
+}
+
+model Show {
+  id       Int      @id @default(autoincrement())
+  title    String?
+  type     ShowType
+  month    Month
+  week     Int
+
+  matches  Match[]
+}
+
+model Match {
+  id             Int              @id @default(autoincrement())
+  title          String?
+  matchType      MatchType
+  stipulation    Stipulation?
+  finish         FinishType
+
+  championshipId Int?
+  championship   Championship?    @relation(fields: [championshipId], references: [id])
+
+  showId         Int
+  show           Show             @relation(fields: [showId], references: [id])
+
+  participants   MatchParticipant[]
+  interferences  MatchInterference[]
+
+  createdAt      DateTime @default(now())
+}
+
+model MatchParticipant {
+  id          Int       @id @default(autoincrement())
+  matchId     Int
+  characterId Int
+  isWinner    Boolean   @default(false)
+
+  match       Match     @relation(fields: [matchId], references: [id])
+  character   Character @relation(fields: [characterId], references: [id])
+}
+
+model MatchInterference {
+  id          Int       @id @default(autoincrement())
+  matchId     Int
+  characterId Int
+
+  match       Match     @relation(fields: [matchId], references: [id])
+  character   Character @relation(fields: [characterId], references: [id])
+}
+
+//////////////////////
+// SINGLE-MEMBER STRUCTURES
+//////////////////////
+
+model Faction {
+  id         Int          @id @default(autoincrement())
+  name       String
+  members    Character[]
+}
+
+model TagTeam {
+  id         Int          @id @default(autoincrement())
+  name       String
+  members    Character[]
+}
+
+model Rivalry {
+  id         Int          @id @default(autoincrement())
+  name       String?
+  intensity  Int          @default(1)
+  members    Character[]
+}
+
+model Friendship {
+  id         Int          @id @default(autoincrement())
+  strength   Int          @default(1)
+  members    Character[]
+}
