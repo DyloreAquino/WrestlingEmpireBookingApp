@@ -1,18 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { scheduleMatchAction, resolveMatchAction } from "@actions/booking";
+import { scheduleMatchAction, resolveMatchAction } from "@/app/actions/booking";
 
-// 1. Define the interface for the props
-interface MatchCardProps {
-  showId: number;
-  wrestlers: {
-    id: number;
-    name: string;
-  }[]; // This says wrestlers is an array of objects
-}
-
-export default function MatchCard({ showId, wrestlers } : MatchCardProps) {
+export default function MatchCard({ showId, wrestlers }) {
   const [matchId, setMatchId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
 
