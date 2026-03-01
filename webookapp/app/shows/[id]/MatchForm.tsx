@@ -42,20 +42,35 @@ export default function MatchForm({ showId, characters, championships }: MatchFo
     .filter(c => selectedIds.includes(c.id))
     .map(c => c.name)
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    
     if (selectedIds.length < 2) {
-      e.preventDefault()
-      alert('Please select at least 2 participants')
-      setIsModalOpen(true)
-      return
+        alert('Please select at least 2 participants')
+        setIsModalOpen(true)
+        return
     }
-  }
+
+    const formData = new FormData(e.currentTarget)
+
+    const res = await fetch('/api/matches', {
+        method: 'POST',
+        body: formData,
+    })
+
+    if (res.ok) {
+        const data = await res.json()
+        window.location.href = `/match/${data.id}`
+    } else {
+        alert('Failed to create match')
+    }
+    }
 
   return (
     <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 sticky top-6">
       <h2 className="text-xl font-bold text-white mb-4">Add Match</h2>
       
-      <form action="/api/matches" method="POST" onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <input type="hidden" name="showId" value={showId} />
         <input type="hidden" name="participants" value={selectedIds.join(',')} />
         

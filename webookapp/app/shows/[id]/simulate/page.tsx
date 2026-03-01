@@ -1,21 +1,20 @@
 import { prisma } from '@db'
-import { notFound, redirect } from 'next/navigation'
-import { revalidatePath } from 'next/cache'
+import { notFound } from 'next/navigation'
 import { FinishType } from '@/generated/prisma/enums'
 import Link from 'next/link'
+import SimulateMatchCard from './SimulateMatchCard'
 
 async function getShowWithUnsimulatedMatches(id: string) {
   const show = await prisma.show.findUnique({
     where: { id: parseInt(id) },
     include: {
       matches: {
-        where: { 
-            NOT: { finish: 'UNFINISHED' }
-        },
+        where: { finish: FinishType.UNFINISHED },
         include: {
           participants: { include: { character: true } },
           championship: { include: { reigns: { where: { isCurrent: true } } } }
-        }
+        },
+        orderBy: { id: 'asc' }
       }
     }
   })
@@ -23,113 +22,70 @@ async function getShowWithUnsimulatedMatches(id: string) {
   return show
 }
 
-async function simulateMatch(formData: FormData) {
-  'use server'
-  
-  const matchId = parseInt(formData.get('matchId') as string)
-  const winnerId = parseInt(formData.get('winnerId') as string)
-  const finish = formData.get('finish') as FinishType
-  
-  // Update match finish
-  await prisma.match.update({
-    where: { id: matchId },
-    data: { finish }
-  })
-  
-  // Reset all winners
-  await prisma.matchParticipant.updateMany({
-    where: { matchId },
-    data: { isWinner: false }
-  })
-  
-  // Set new winner (using updateMany - no schema change needed)
-  await prisma.matchParticipant.updateMany({
-    where: { matchId, characterId: winnerId },
-    data: { isWinner: true }
-  })
-  
-  // Handle title change...
-  const match = await prisma.match.findUnique({
-    where: { id: matchId },
-    include: { championship: true }
-  })
-  
-  if (match?.championshipId) {
-    await prisma.titleReign.updateMany({
-      where: { championshipId: match.championshipId, isCurrent: true },
-      data: { isCurrent: false, endDate: new Date() }
-    })
-    
-    await prisma.titleReign.create({
-      data: {
-        championshipId: match.championshipId,
-        characterId: winnerId,
-        startDate: new Date(),
-        isCurrent: true
-      }
-    })
-  }
-  
-  revalidatePath(`/shows/${match?.showId}/simulate`)
-  revalidatePath(`/shows/${match?.showId}`)
-  revalidatePath(`/roster/${winnerId}`)
-}
-
-export default async function SimulatePage({ params }: { params: { id: string } }) {
-  const show = await getShowWithUnsimulatedMatches(params.id)
-  
-  if (show.matches.length === 0) {
-    return (
-      <div className="p-4">
-        <h1 className="text-2xl font-bold mb-4">All matches simulated!</h1>
-        <Link href={`/shows/${show.id}`} className="text-blue-600">
-          ← Back to show
-        </Link>
-      </div>
-    )
-  }
+export default async function SimulatePage({
+  params
+}: {
+  params: Promise<{ id: string }> | { id: string }
+}) {
+  const resolvedParams = await Promise.resolve(params)
+  const show = await getShowWithUnsimulatedMatches(resolvedParams.id)
 
   return (
-    <div className="p-4 max-w-2xl">
-      <h1 className="text-2xl font-bold mb-4">
-        Simulate: {show.title || `${show.month} Week ${show.week}`}
-      </h1>
-      
-      {show.matches.map(match => (
-        <form key={match.id} action={simulateMatch} className="mb-6 p-4 border rounded bg-gray-50">
-          <input type="hidden" name="matchId" value={match.id} />
-          
-          <h3 className="font-bold mb-2">
-            {match.matchType}
-            {match.championship && ` for ${match.championship.name}`}
-          </h3>
-          
-          <div className="mb-3">
-            <label className="block text-sm font-medium mb-1">Winner</label>
-            <select name="winnerId" className="w-full border rounded p-2" required>
-              <option value="">Select winner...</option>
-              {match.participants.map(p => (
-                <option key={p.characterId} value={p.characterId}>
-                  {p.character.name}
-                </option>
-              ))}
-            </select>
+    <div className="min-h-screen bg-gray-900 text-gray-100">
+      <div className="p-6 max-w-7xl mx-auto">
+
+        {/* Breadcrumb */}
+        <div className="mb-4 text-sm text-gray-400">
+          <Link href="/shows" className="hover:text-white transition">Shows</Link>
+          <span className="mx-2">→</span>
+          <Link href={`/shows/${show.id}`} className="hover:text-white transition">
+            {show.title || `${show.month} Week ${show.week}`}
+          </Link>
+          <span className="mx-2">→</span>
+          <span className="text-white">Simulate</span>
+        </div>
+
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-white">
+              Simulate: {show.title || `${show.month} Week ${show.week}`}
+            </h1>
+            <p className="text-gray-400 mt-1">
+              {show.matches.length === 0
+                ? 'All matches simulated'
+                : `${show.matches.length} match${show.matches.length !== 1 ? 'es' : ''} remaining`}
+            </p>
           </div>
-          
-          <div className="mb-3">
-            <label className="block text-sm font-medium mb-1">Finish</label>
-            <select name="finish" className="w-full border rounded p-2" required>
-              {Object.values(FinishType).map(f => (
-                <option key={f} value={f}>{f}</option>
-              ))}
-            </select>
+          <Link
+            href={`/shows/${show.id}`}
+            className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded font-medium transition text-sm"
+          >
+            ← Back to Show
+          </Link>
+        </div>
+
+        {show.matches.length === 0 ? (
+          <div className="bg-gray-800 rounded-lg border border-gray-700 p-12 text-center">
+            <div className="text-4xl mb-4">✅</div>
+            <h2 className="text-2xl font-bold text-white mb-2">All matches simulated!</h2>
+            <p className="text-gray-400 mb-6">Every match on this show has a result.</p>
+            <Link
+              href={`/shows/${show.id}`}
+              className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 rounded font-medium transition"
+            >
+              ← Back to Show
+            </Link>
           </div>
-          
-          <button type="submit" className="bg-purple-600 text-white px-4 py-2 rounded w-full">
-            Simulate Match
-          </button>
-        </form>
-      ))}
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {show.matches.map((match, index) => (
+              <SimulateMatchCard key={match.id} match={match} index={index} />
+            ))}
+          </div>
+        )}
+
+      </div>
     </div>
   )
 }
