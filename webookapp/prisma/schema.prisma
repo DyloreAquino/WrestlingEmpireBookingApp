@@ -111,6 +111,13 @@ enum FinishType {
   UNFINISHED
 }
 
+enum CardPlacement {
+  UNDERCARD
+  MIDCARD
+  SEMI_MAIN
+  MAIN
+}
+
 //////////////////////
 // CORE MODELS
 //////////////////////
@@ -156,27 +163,37 @@ model Championship {
   matches   Match[]
 }
 
-model TitleReign {
-  id              Int           @id @default(autoincrement())
-  championshipId  Int
-  championship    Championship  @relation(fields: [championshipId], references: [id])
+model Show {
+  id        Int      @id @default(autoincrement())
+  title     String?
+  type      ShowType
+  month     Month
+  year      Int      @default(1)
+  location  String   @default("Parts Unknown")
+  week      Int
+  updatedAt DateTime @updatedAt @default(now())
 
-  characterId     Int
-  character       Character     @relation(fields: [characterId], references: [id])
-
-  startDate       DateTime
-  endDate         DateTime?
-  isCurrent       Boolean       @default(true)
+  matches      Match[]
+  titleReigns  TitleReign[]
 }
 
-model Show {
-  id       Int      @id @default(autoincrement())
-  title    String?
-  type     ShowType
-  month    Month
-  week     Int
-
-  matches  Match[]
+model TitleReign {
+  id             Int          @id @default(autoincrement())
+  championshipId Int
+  championship   Championship @relation(fields: [championshipId], references: [id])
+  characterId    Int
+  character      Character    @relation(fields: [characterId], references: [id])
+  showId         Int?
+  show           Show?        @relation(fields: [showId], references: [id])
+  startMonth     Month?
+  startWeek      Int?
+  startYear      Int?
+  endMonth       Month?
+  endWeek        Int?
+  endYear        Int?
+  startDate      DateTime
+  endDate        DateTime?
+  isCurrent      Boolean      @default(true)
 }
 
 model Match {
@@ -185,6 +202,7 @@ model Match {
   matchType      MatchType
   stipulation    Stipulation?
   finish         FinishType
+  placement      CardPlacement    @default(UNDERCARD)
 
   championshipId Int?
   championship   Championship?    @relation(fields: [championshipId], references: [id])

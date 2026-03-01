@@ -33,26 +33,23 @@ export default function RootLayout({
         {/* Navigation */}
         <nav className="bg-gray-800 border-b border-gray-700">
           <div className="max-w-6xl mx-auto px-6">
-            <div className="flex items-center gap-8 h-16">
-              <Link 
-                href="/" 
+            <div className="flex items-center justify-between h-16">
+              <Link
+                href="/"
                 className="text-xl font-bold text-white hover:text-blue-400 transition"
               >
                 Wrestling Booker
               </Link>
-              
+
               <div className="flex items-center gap-6">
-                <Link 
-                  href="/roster" 
-                  className="text-gray-300 hover:text-white transition"
-                >
+                <Link href="/roster" className="text-gray-300 hover:text-white transition">
                   Roster
                 </Link>
-                <Link 
-                  href="/shows" 
-                  className="text-gray-300 hover:text-white transition"
-                >
+                <Link href="/shows" className="text-gray-300 hover:text-white transition">
                   Shows
+                </Link>
+                <Link href="/championships" className="text-gray-300 hover:text-white transition">
+                  Championships
                 </Link>
               </div>
             </div>

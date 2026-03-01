@@ -1,6 +1,6 @@
 // app/api/matches/route.ts
 import { prisma } from '@db'
-import { MatchType, Stipulation, FinishType } from '@/generated/prisma/enums'
+import { MatchType, Stipulation, FinishType, CardPlacement } from '@/generated/prisma/enums'
 import { NextResponse } from 'next/server'
 
 export async function POST(req: Request) {
@@ -17,6 +17,7 @@ export async function POST(req: Request) {
     const stipulation = (formData.get('stipulation') as Stipulation) || undefined
     const championshipIdRaw = formData.get('championshipId') as string
     const championshipId = championshipIdRaw ? parseInt(championshipIdRaw) : undefined
+    const placement = formData.get('placement') as CardPlacement ?? CardPlacement.UNDERCARD
 
     if (!showId || participants.length < 2) {
       return NextResponse.json(
@@ -33,6 +34,7 @@ export async function POST(req: Request) {
         stipulation: stipulation || null,
         championshipId: championshipId || null,
         finish: FinishType.UNFINISHED,
+        placement,
         participants: {
           create: participants.map(characterId => ({ characterId }))
         }

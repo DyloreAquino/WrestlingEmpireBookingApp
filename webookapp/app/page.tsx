@@ -2,8 +2,10 @@
 import Link from 'next/link'
 import { prisma } from '@db'
 
+const MONTH_ORDER = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']
+
 async function getHomeData() {
-  const [currentChampions, upcomingShow] = await Promise.all([
+  const [currentChampions, recentShow] = await Promise.all([
     prisma.titleReign.findMany({
       where: { isCurrent: true },
       include: {
@@ -12,23 +14,56 @@ async function getHomeData() {
       }
     }),
     prisma.show.findFirst({
-      orderBy: [{ month: 'desc' }, { week: 'desc' }],
+      orderBy: { updatedAt: 'desc' },
       include: {
-        _count: { select: { matches: true } }
+        _count: { select: { matches: true } },
+        matches: { select: { finish: true } }
       }
     })
   ])
 
-  return { currentChampions, upcomingShow }
+  if (!recentShow) {
+    return { currentChampions, featuredShow: null, label: 'upcoming' as const }
+  }
+
+  const total = recentShow._count.matches
+  const simulated = recentShow.matches.filter(m => m.finish !== 'UNFINISHED').length
+  const fullyDone = total > 0 && simulated === total
+
+  if (!fullyDone) {
+    return { currentChampions, featuredShow: recentShow, label: 'recent' as const }
+  }
+
+  const allShows = await prisma.show.findMany({
+    include: {
+      _count: { select: { matches: true } },
+      matches: { select: { finish: true } }
+    }
+  })
+
+  const recentMonthIndex = MONTH_ORDER.indexOf(recentShow.month)
+
+  const nextShow = allShows
+    .filter(s => {
+      const monthIndex = MONTH_ORDER.indexOf(s.month)
+      return monthIndex > recentMonthIndex ||
+        (monthIndex === recentMonthIndex && s.week > recentShow.week)
+    })
+    .sort((a, b) => {
+      const monthDiff = MONTH_ORDER.indexOf(a.month) - MONTH_ORDER.indexOf(b.month)
+      return monthDiff !== 0 ? monthDiff : a.week - b.week
+    })[0] ?? null
+
+  return { currentChampions, featuredShow: nextShow, label: 'upcoming' as const }
 }
 
 export default async function HomePage() {
-  const { currentChampions, upcomingShow } = await getHomeData()
+  const { currentChampions, featuredShow, label } = await getHomeData()
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100">
       <div className="p-6 max-w-4xl mx-auto">
-        
+
         {/* Header */}
         <h1 className="text-4xl font-bold text-white mt-8 mb-8 text-center">Wrestling Booker</h1>
 
@@ -58,60 +93,74 @@ export default async function HomePage() {
           )}
         </section>
 
-        {/* Upcoming Show */}
+        {/* Featured Show */}
         <section className="mb-8">
-          <h2 className="text-xl font-bold text-white mb-4">Upcoming Show</h2>
-          {upcomingShow ? (
+          <h2 className="text-xl font-bold text-white mb-4">
+            {label === 'recent' ? 'Recent Show' : 'Upcoming Show'}
+          </h2>
+          {featuredShow ? (
             <Link
-              href={`/shows/${upcomingShow.id}`}
+              href={`/shows/${featuredShow.id}`}
               className="block p-6 bg-gray-800 rounded-lg border border-gray-700 hover:border-purple-600 transition"
             >
               <div className="flex items-center justify-between">
                 <div>
                   <div className="flex items-center gap-3 mb-2">
-                    <span className={`
-                      px-3 py-1 rounded text-sm font-medium
-                      ${upcomingShow.type === 'PPV' ? 'bg-purple-900 text-purple-200' : 'bg-blue-900 text-blue-200'}
-                    `}>
-                      {upcomingShow.type}
+                    <span className={`px-3 py-1 rounded text-sm font-medium ${
+                      featuredShow.type === 'PPV' ? 'bg-purple-900 text-purple-200' : 'bg-blue-900 text-blue-200'
+                    }`}>
+                      {featuredShow.type}
                     </span>
-                    <span className="text-gray-400">{upcomingShow.month} Week {upcomingShow.week}</span>
+                    <span className="text-gray-400">{featuredShow.month} Week {featuredShow.week}</span>
                   </div>
                   <div className="text-2xl font-bold text-white">
-                    {upcomingShow.title || `${upcomingShow.type} - ${upcomingShow.month} Week ${upcomingShow.week}`}
+                    {featuredShow.title || `${featuredShow.type} - ${featuredShow.month} Week ${featuredShow.week}`}
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-3xl font-bold text-purple-400">{upcomingShow._count.matches}</div>
+                  <div className="text-3xl font-bold text-purple-400">{featuredShow._count.matches}</div>
                   <div className="text-sm text-gray-500">matches booked</div>
                 </div>
               </div>
             </Link>
           ) : (
-            <div className="text-gray-500 bg-gray-800 rounded-lg p-6 border border-gray-700 text-center">
-              No upcoming shows
-            </div>
+            <Link
+              href="/shows"
+              className="block p-6 bg-gray-800 rounded-lg border border-gray-700 hover:border-green-600 transition text-center"
+            >
+              <div className="text-gray-400 mb-2">No upcoming shows scheduled</div>
+              <div className="text-green-400 font-medium">+ Create a new show →</div>
+            </Link>
           )}
         </section>
 
         {/* Navigation */}
-        <div className="grid grid-cols-2 gap-4">
-          <Link 
+        <div className="grid grid-cols-3 gap-4">
+          <Link
             href="/roster"
-            className="p-6 bg-gray-800 rounded-lg border border-gray-700 hover:border-blue-500 hover:bg-gray-750 transition text-center"
+            className="p-6 bg-gray-800 rounded-lg border border-gray-700 hover:border-blue-500 transition text-center"
           >
             <div className="text-4xl mb-2">👤</div>
             <div className="text-lg font-bold text-white">Roster</div>
             <div className="text-sm text-gray-400">Manage wrestlers</div>
           </Link>
 
-          <Link 
+          <Link
             href="/shows"
-            className="p-6 bg-gray-800 rounded-lg border border-gray-700 hover:border-green-500 hover:bg-gray-750 transition text-center"
+            className="p-6 bg-gray-800 rounded-lg border border-gray-700 hover:border-green-500 transition text-center"
           >
             <div className="text-4xl mb-2">📺</div>
             <div className="text-lg font-bold text-white">Shows</div>
             <div className="text-sm text-gray-400">Book events</div>
+          </Link>
+
+          <Link
+            href="/championships"
+            className="p-6 bg-gray-800 rounded-lg border border-gray-700 hover:border-yellow-500 transition text-center"
+          >
+            <div className="text-4xl mb-2">🏆</div>
+            <div className="text-lg font-bold text-white">Championships</div>
+            <div className="text-sm text-gray-400">Title belts</div>
           </Link>
         </div>
 
