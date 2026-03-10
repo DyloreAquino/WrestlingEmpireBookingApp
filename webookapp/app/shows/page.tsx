@@ -3,7 +3,6 @@ import { prisma } from '@/app/lib/db'
 import { redirect } from 'next/navigation'
 import { Month, ShowType } from "@/generated/prisma/client"
 import ShowsCalendar from './ShowsCalendar'
-export const dynamic = 'force-dynamic'
 
 async function getShows() {
   return prisma.show.findMany({

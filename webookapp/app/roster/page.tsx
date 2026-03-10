@@ -6,7 +6,6 @@ import { revalidatePath } from 'next/cache'
 import { Role, Gender, Alignment, Division } from "@/generated/prisma/client"
 import RosterFilters from './RosterFilters'
 import CreateGroupForm from './CreateGroupForm'
-export const dynamic = 'force-dynamic'
 
 async function getRoster() {
   const [characters, factions, tagTeams] = await Promise.all([

@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { FinishType } from "@/generated/prisma/client"
 import ShowCard from './ShowCard'
-export const dynamic = 'force-dynamic'
 
 async function getShow(id: string) {
   const showId = parseInt(id)

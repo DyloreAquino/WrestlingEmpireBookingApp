@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { Division, TitleGender } from "@/generated/prisma/client"
-export const dynamic = 'force-dynamic'
 
 const MAX_CHAMPIONSHIPS = 4
 
