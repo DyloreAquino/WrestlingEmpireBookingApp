@@ -3,6 +3,7 @@ import { prisma } from '@/app/lib/db'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { FinishType } from "@/generated/prisma/client"
+export const dynamic = 'force-dynamic'
 
 async function getMatch(id: string) {
   const match = await prisma.match.findUnique({

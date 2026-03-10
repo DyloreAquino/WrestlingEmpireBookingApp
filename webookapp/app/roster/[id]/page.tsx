@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 import { Alignment, Division, Gender, Role } from "@/generated/prisma/client"
 import DeleteCharacterButton from './DeleteCharacterButton'
 import UpdateCharacterButton from './UpdateCharacterButton'
+export const dynamic = 'force-dynamic'
 
 async function getCharacter(id: string) {
   const characterId = parseInt(id)

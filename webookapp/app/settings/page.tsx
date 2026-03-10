@@ -3,6 +3,7 @@ import { prisma } from '@db'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import ResetPanel from './ResetPanel'
+export const dynamic = 'force-dynamic'
 
 async function getStats() {
   const [wrestlers, shows, championships, matches, reigns] = await Promise.all([

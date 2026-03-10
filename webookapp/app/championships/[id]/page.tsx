@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import AssignChampionModal from './AssignChampionModal'
+export const dynamic = 'force-dynamic'
 
 const MONTH_LABELS: Record<string, string> = {
   JAN: 'Jan', FEB: 'Feb', MAR: 'Mar', APR: 'Apr',

@@ -1,6 +1,7 @@
 // app/page.tsx
 import Link from 'next/link'
 import { prisma } from '@db'
+export const dynamic = 'force-dynamic'
 
 const MONTH_ORDER = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']
 
