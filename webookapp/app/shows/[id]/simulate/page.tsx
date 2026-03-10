@@ -1,6 +1,6 @@
 import { prisma } from '@db'
 import { notFound } from 'next/navigation'
-import { FinishType } from '@/generated/prisma/enums'
+import { FinishType } from '@prisma/client'
 import Link from 'next/link'
 import SimulateMatchCard from './SimulateMatchCard'
 
