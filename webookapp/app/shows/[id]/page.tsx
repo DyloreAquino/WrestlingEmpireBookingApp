@@ -2,7 +2,7 @@
 import { prisma } from '@db'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { FinishType } from '@/generated/prisma'
+import { FinishType } from '@/generated/prisma/enums'
 import ShowCard from './ShowCard'
 
 async function getShow(id: string) {
@@ -41,9 +41,11 @@ async function getCharactersAndChampionships() {
 export default async function ShowPage({
   params
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }> | { id: string }
 }) {
-  const id = params.id
+  const resolvedParams = await Promise.resolve(params)
+  const id = resolvedParams.id
+
   const [show, { characters, championships }] = await Promise.all([
     getShow(id),
     getCharactersAndChampionships()

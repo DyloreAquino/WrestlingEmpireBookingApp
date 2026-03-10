@@ -172,8 +172,7 @@ model Show {
   location  String   @default("Parts Unknown")
   week      Int
   updatedAt DateTime @updatedAt @default(now())
-  createdAt DateTime @default(now())
-  
+
   matches      Match[]
   titleReigns  TitleReign[]
 }

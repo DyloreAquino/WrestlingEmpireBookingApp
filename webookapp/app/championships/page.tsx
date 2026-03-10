@@ -3,14 +3,7 @@ import { prisma } from '@db'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { Division, TitleGender } from '@/generated/prisma'
-import { Prisma } from '@/generated/prisma'
-
-type ChampionshipWithReign = Prisma.ChampionshipGetPayload<{
-  include: {
-    reigns: { include: { character: true } }
-  }
-}>
+import { Division, TitleGender } from '@/generated/prisma/enums'
 
 const MAX_CHAMPIONSHIPS = 4
 
@@ -73,7 +66,7 @@ async function deleteChampionship(formData: FormData) {
 }
 
 export default async function ChampionshipsPage() {
-  const championships = await getChampionships() as ChampionshipWithReign[]
+  const championships = await getChampionships()
   const canCreate = championships.length < MAX_CHAMPIONSHIPS
 
   return (

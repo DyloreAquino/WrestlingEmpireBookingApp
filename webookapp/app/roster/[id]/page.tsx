@@ -2,7 +2,7 @@
 import { prisma } from '@db'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Alignment, Division, Gender, Role } from '@/generated/prisma'
+import { Alignment, Division, Gender, Role } from '@/generated/prisma/enums'
 import DeleteCharacterButton from './DeleteCharacterButton'
 import UpdateCharacterButton from './UpdateCharacterButton'
 
