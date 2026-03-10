@@ -1,7 +1,7 @@
 // app/shows/page.tsx
 import { prisma } from '@/app/lib/db'
 import { redirect } from 'next/navigation'
-import { Month, ShowType } from "@/generated/prisma/client"
+import { Month, ShowType } from '@/generated/prisma'
 import ShowsCalendar from './ShowsCalendar'
 
 async function getShows() {
