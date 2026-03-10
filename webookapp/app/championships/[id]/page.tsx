@@ -4,6 +4,14 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import AssignChampionModal from './AssignChampionModal'
+import { Prisma } from '@/generated/prisma'
+
+type ChampionshipFull = Prisma.ChampionshipGetPayload<{
+  include: {
+    reigns: { include: { character: true; show: true } }
+    matches: { include: { show: true; participants: { include: { character: true } } } }
+  }
+}>
 
 const MONTH_LABELS: Record<string, string> = {
   JAN: 'Jan', FEB: 'Feb', MAR: 'Mar', APR: 'Apr',
@@ -82,7 +90,7 @@ export default async function ChampionshipPage({
   params: Promise<{ id: string }> | { id: string }
 }) {
   const { id } = await Promise.resolve(params)
-  const championship = await getChampionship(id)
+  const championship = await getChampionship(id) as ChampionshipFull
   if (!championship) notFound()
 
   // Fetch eligible wrestlers filtered by title gender

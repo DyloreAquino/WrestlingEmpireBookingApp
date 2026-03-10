@@ -3,7 +3,7 @@ import { prisma } from '@db'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { Role, Gender, Alignment, Division } from '@/generated/prisma/enums'
+import { Role, Gender, Alignment, Division } from '@/generated/prisma'
 import RosterFilters from './RosterFilters'
 import CreateGroupForm from './CreateGroupForm'
 

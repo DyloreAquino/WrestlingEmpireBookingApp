@@ -1,6 +1,6 @@
 // app/api/matches/route.ts
 import { prisma } from '@db'
-import { MatchType, Stipulation, FinishType, CardPlacement } from '@/generated/prisma/enums'
+import { MatchType, Stipulation, FinishType, CardPlacement } from '@/generated/prisma/client'
 import { NextResponse } from 'next/server'
 
 export async function POST(req: Request) {

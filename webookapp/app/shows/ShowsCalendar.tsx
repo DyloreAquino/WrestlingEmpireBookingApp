@@ -11,6 +11,8 @@ type Show = {
   week: number
   year: number
   title: string | null
+  location: string
+  updatedAt: Date
   _count: { matches: number }
   matches: { finish: string }[]
 }

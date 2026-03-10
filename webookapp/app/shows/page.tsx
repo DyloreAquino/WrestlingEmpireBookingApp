@@ -1,7 +1,7 @@
 // app/shows/page.tsx
-import { prisma } from '@/app/lib/db'
+import { prisma } from '@db'
 import { redirect } from 'next/navigation'
-import { Month, ShowType } from '@/generated/prisma/enums'
+import { Month, ShowType } from '@/generated/prisma'
 import ShowsCalendar from './ShowsCalendar'
 
 async function getShows() {
@@ -17,11 +17,11 @@ async function getShows() {
 async function createShow(formData: FormData) {
   'use server'
 
-  const type  = formData.get('type') as ShowType
+  const type = formData.get('type') as ShowType
   const month = formData.get('month') as Month
-  const week  = parseInt(formData.get('week') as string)
-  const year  = parseInt(formData.get('year') as string)
-  const title = formData.get('title') as string || null
+  const week = parseInt(formData.get('week') as string)
+  const year = parseInt(formData.get('year') as string)
+  const title = (formData.get('title') as string) || null
 
   const show = await prisma.show.create({
     data: { type, month, week, year, title }
@@ -30,11 +30,24 @@ async function createShow(formData: FormData) {
   redirect(`/shows/${show.id}`)
 }
 
-const MONTH_ORDER = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
-const MONTH_LABELS: Record<string, string> = {
-  JAN: 'January', FEB: 'February', MAR: 'March', APR: 'April',
-  MAY: 'May', JUN: 'June', JUL: 'July', AUG: 'August',
-  SEP: 'September', OCT: 'October', NOV: 'November', DEC: 'December'
+const MONTH_ORDER = [
+  'JAN','FEB','MAR','APR','MAY','JUN',
+  'JUL','AUG','SEP','OCT','NOV','DEC'
+]
+
+const MONTH_LABELS: Record<string,string> = {
+  JAN:'January',
+  FEB:'February',
+  MAR:'March',
+  APR:'April',
+  MAY:'May',
+  JUN:'June',
+  JUL:'July',
+  AUG:'August',
+  SEP:'September',
+  OCT:'October',
+  NOV:'November',
+  DEC:'December'
 }
 
 export default async function ShowsPage() {
@@ -46,19 +59,18 @@ export default async function ShowsPage() {
   })
 
   const currentCalendarMonth = MONTH_ORDER[new Date().getMonth()]
-  const currentCalendarYear  = new Date().getFullYear()
-  const defaultMonth = mostRecentShow?.month ?? currentCalendarMonth
-  const defaultYear  = mostRecentShow?.year  ?? currentCalendarYear
+  const currentCalendarYear = new Date().getFullYear()
 
-  // Group by year → month
+  const defaultMonth = mostRecentShow?.month ?? currentCalendarMonth
+  const defaultYear = mostRecentShow?.year ?? currentCalendarYear
+
   const byYear: Record<number, Record<string, typeof shows>> = {}
+
   for (const show of shows) {
     if (!byYear[show.year]) byYear[show.year] = {}
     if (!byYear[show.year][show.month]) byYear[show.year][show.month] = []
     byYear[show.year][show.month].push(show)
   }
-
-  const years = Object.keys(byYear).map(Number)
 
   return (
     <div className="text-gray-100">
