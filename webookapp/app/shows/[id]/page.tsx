@@ -62,7 +62,7 @@ export default async function ShowPage({
   )]
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100">
+    <div className="text-gray-100">
       <div className="p-6 max-w-5xl mx-auto">
 
         {/* Breadcrumb */}

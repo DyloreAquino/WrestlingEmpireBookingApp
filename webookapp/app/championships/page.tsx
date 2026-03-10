@@ -70,7 +70,7 @@ export default async function ChampionshipsPage() {
   const canCreate = championships.length < MAX_CHAMPIONSHIPS
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100">
+    <div className="text-gray-100">
       <div className="p-6 max-w-5xl mx-auto">
 
         {/* Header */}

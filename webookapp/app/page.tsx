@@ -61,7 +61,7 @@ export default async function HomePage() {
   const { currentChampions, featuredShow, label } = await getHomeData()
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100">
+    <div className="text-gray-100">
       <div className="p-6 max-w-4xl mx-auto">
 
         {/* Header */}

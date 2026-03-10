@@ -48,7 +48,7 @@ export default async function CharacterPage({
   const total = character.matchEntries.length
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100">
+    <div className="text-gray-100">
       <div className="p-6 max-w-6xl mx-auto">
         {/* Breadcrumb */}
         <div className="mb-4 text-sm text-gray-400">

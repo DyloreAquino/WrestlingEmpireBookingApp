@@ -49,7 +49,7 @@ export default async function RosterPage() {
   }))
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100">
+    <div className="text-gray-100">
       <div className="p-6 max-w-6xl mx-auto">
         <h1 className="text-3xl font-bold mb-6 text-white">Roster</h1>
 
