@@ -180,9 +180,9 @@ model Show {
 model TitleReign {
   id             Int          @id @default(autoincrement())
   championshipId Int
-  championship   Championship @relation(fields: [championshipId], references: [id])
+  championship   Championship @relation(fields: [championshipId], references: [id], onDelete: Cascade)
   characterId    Int
-  character      Character    @relation(fields: [characterId], references: [id])
+  character      Character    @relation(fields: [characterId], references: [id], onDelete: Cascade)
   showId         Int?
   show           Show?        @relation(fields: [showId], references: [id])
   startMonth     Month?
@@ -222,8 +222,8 @@ model MatchParticipant {
   characterId Int
   isWinner    Boolean   @default(false)
 
-  match       Match     @relation(fields: [matchId], references: [id])
-  character   Character @relation(fields: [characterId], references: [id])
+  match       Match     @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
 }
 
 model MatchInterference {
@@ -231,8 +231,8 @@ model MatchInterference {
   matchId     Int
   characterId Int
 
-  match       Match     @relation(fields: [matchId], references: [id])
-  character   Character @relation(fields: [characterId], references: [id])
+  match       Match     @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
 }
 
 //////////////////////

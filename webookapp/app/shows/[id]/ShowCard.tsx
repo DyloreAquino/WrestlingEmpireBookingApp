@@ -183,7 +183,7 @@ export default function ShowCard({ showId, showType, matches, characters, champi
     setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])
   }
 
-  const selectedNames = characters.filter(c => selectedIds.includes(c.id)).map(c => c.name)
+  const selectedNames = characters.filter(c => selectedIds.includes(c.id)).map(c => ({id: c.id, name: c.name}))
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -307,8 +307,8 @@ export default function ShowCard({ showId, showType, matches, characters, champi
                 >
                   {selectedNames.length === 0
                     ? <span className="text-gray-500 text-sm italic">Click to select participants...</span>
-                    : selectedNames.map(name => (
-                        <span key={name} className="bg-blue-900 text-blue-200 px-2 py-1 rounded text-xs">{name}</span>
+                    : selectedNames.map(({id, name}) => (
+                        <span key={id} className="bg-blue-900 text-blue-200 px-2 py-1 rounded text-xs">{name}</span>
                       ))
                   }
                 </div>
