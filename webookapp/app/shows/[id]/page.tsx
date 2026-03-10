@@ -2,7 +2,7 @@
 import { prisma } from '@db'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { FinishType } from '@/generated/prisma'
+import { FinishType } from "@/generated/prisma/client"
 import ShowCard from './ShowCard'
 
 async function getShow(id: string) {
