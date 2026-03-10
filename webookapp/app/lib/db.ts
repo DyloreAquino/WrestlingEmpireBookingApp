@@ -1,16 +1,11 @@
+import "dotenv/config";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { PrismaClient } from "../../generated/prisma/client";
-import { withAccelerate } from "@prisma/extension-accelerate";
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: ReturnType<typeof makePrismaClient>
-}
+const connectionString = `${process.env.DATABASE_URL}`;
 
-function makePrismaClient() {
-  return new PrismaClient({
-    accelerateUrl: process.env.DATABASE_URL!,
-  }).$extends(withAccelerate())
-}
+const adapter = new PrismaBetterSqlite3({ url: connectionString });
+const prisma = new PrismaClient({ adapter });
 
-export const prisma = globalForPrisma.prisma ?? makePrismaClient()
+export { prisma };
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma
