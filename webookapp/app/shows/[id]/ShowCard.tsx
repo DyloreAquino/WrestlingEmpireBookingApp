@@ -3,7 +3,7 @@
 // app/shows/[id]/ShowCard.tsx
 import { useState } from 'react'
 import Link from 'next/link'
-import { MatchType, Stipulation, CardPlacement } from '@/generated/prisma'
+import { MatchType, Stipulation, CardPlacement } from '@/generated/prisma/enums'
 
 interface Character {
   id: number
