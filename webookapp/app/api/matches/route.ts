@@ -1,14 +1,12 @@
 // app/api/matches/route.ts
 import { prisma } from '@db'
-import { auth } from '@/auth'
 import { MatchType, Stipulation, FinishType, CardPlacement } from "@/app/lib/types"
 import { NextResponse } from 'next/server'
 import { getActiveUniverseId } from '@/app/lib/session'
 
 export async function POST(req: Request) {
   try {
-    const session = await auth()
-    const universeId = getActiveUniverseId()
+    const universeId = await getActiveUniverseId()
     if (!universeId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
