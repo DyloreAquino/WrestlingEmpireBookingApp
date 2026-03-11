@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { FinishType } from "@/generated/prisma/client"
+import { FinishType } from "@/app/lib/types"
 
 interface Participant {
   id: number

@@ -2,7 +2,7 @@
 'use client'
 
 import { useState } from 'react'
-import { MatchType, Stipulation, FinishType } from "@/generated/prisma/client"
+import { MatchType, Stipulation, FinishType } from "@/app/lib/types"
 
 interface Character {
   id: number

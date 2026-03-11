@@ -3,7 +3,7 @@ import { prisma } from '@db'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { Division, TitleGender } from "@/generated/prisma/client"
+import { Division, TitleGender } from "@/app/lib/types"
 
 const MAX_CHAMPIONSHIPS = 4
 
