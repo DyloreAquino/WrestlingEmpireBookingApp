@@ -2,13 +2,15 @@
 import { prisma } from '@db'
 import { auth } from '@/auth'
 import { NextResponse } from 'next/server'
+import { getActiveUniverseId } from '@/app/lib/session'
 
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> | { id: string } }
 ) {
   const session = await auth()
-  if (!session?.user?.activeUniverseId) {
+  const activeUniverseId = await getActiveUniverseId()
+  if (!activeUniverseId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -22,7 +24,7 @@ export async function PATCH(
   try {
     // Security check — character must belong to user's universe
     const existing = await prisma.character.findUnique({ where: { id: characterId } })
-    if (!existing || existing.universeId !== session.user.activeUniverseId) {
+    if (!existing || existing.universeId !== activeUniverseId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -46,7 +48,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> | { id: string } }
 ) {
   const session = await auth()
-  if (!session?.user?.activeUniverseId) {
+  const activeUniverseId = await getActiveUniverseId()
+  if (!activeUniverseId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -59,7 +62,7 @@ export async function DELETE(
 
   // Security check — character must belong to user's universe
   const existing = await prisma.character.findUnique({ where: { id: characterId } })
-  if (!existing || existing.universeId !== session.user.activeUniverseId) {
+  if (!existing || existing.universeId !== activeUniverseId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

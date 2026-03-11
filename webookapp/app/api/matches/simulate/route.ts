@@ -3,15 +3,18 @@ import { prisma } from '@db'
 import { auth } from '@/auth'
 import { NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
+import { getActiveUniverseId } from '@/app/lib/session'
 
 export async function POST(req: Request) {
   try {
     const session = await auth()
-    if (!session?.user?.activeUniverseId) {
+    const universeId = await getActiveUniverseId()
+    
+    if (!universeId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const universeId = session.user.activeUniverseId
+    
     const { matchId, winnerIds, finish } = await req.json()
 
     if (!matchId || !winnerIds?.length || !finish) {

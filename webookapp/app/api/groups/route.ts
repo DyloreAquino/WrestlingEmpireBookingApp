@@ -2,15 +2,15 @@
 import { prisma } from '@db'
 import { auth } from '@/auth'
 import { NextResponse } from 'next/server'
-
+import { getActiveUniverseId } from '@/app/lib/session'
 export async function POST(req: Request) {
   try {
     const session = await auth()
-    if (!session?.user?.activeUniverseId) {
+    const universeId = await getActiveUniverseId()
+    if (!universeId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const universeId = session.user.activeUniverseId
     const { type, name, memberIds } = await req.json()
 
     if (!name || !memberIds || memberIds.length < 2) {

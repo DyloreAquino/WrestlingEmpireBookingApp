@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import ResetPanel from './ResetPanel'
 import { auth, signOut } from '@/auth'
 import UniversePanel from './UniversePanel'
+import { getActiveUniverseId } from '../lib/session'
 
 async function createUniverse(fd: FormData) {
   'use server'
@@ -59,8 +60,9 @@ async function getStats(universeId: number | null) {
 async function resetRoster() {
   'use server'
   const session = await auth()
-  if (!session?.user?.activeUniverseId) return
-  const universeId = session.user.activeUniverseId
+  const universeId = await getActiveUniverseId()
+  if (!universeId) return
+  
   await prisma.character.deleteMany({ where: { universeId } })
   await prisma.faction.deleteMany({ where: { universeId } })
   await prisma.tagTeam.deleteMany({ where: { universeId } })
@@ -73,8 +75,8 @@ async function resetRoster() {
 async function resetShows() {
   'use server'
   const session = await auth()
-  if (!session?.user?.activeUniverseId) return
-  const universeId = session.user.activeUniverseId
+  const universeId = await getActiveUniverseId()
+  if (!universeId) return
   await prisma.matchParticipant.deleteMany({ where: { match: { show: { universeId } } } })
   await prisma.matchInterference.deleteMany({ where: { match: { show: { universeId } } } })
   await prisma.match.deleteMany({ where: { show: { universeId } } })
@@ -87,8 +89,8 @@ async function resetShows() {
 async function resetChampionships() {
   'use server'
   const session = await auth()
-  if (!session?.user?.activeUniverseId) return
-  const universeId = session.user.activeUniverseId
+  const universeId = await getActiveUniverseId()
+  if (!universeId) return
   await prisma.titleReign.deleteMany({ where: { championship: { universeId } } })
   await prisma.championship.deleteMany({ where: { universeId } })
   revalidatePath('/settings')
@@ -98,8 +100,8 @@ async function resetChampionships() {
 async function resetAll() {
   'use server'
   const session = await auth()
-  if (!session?.user?.activeUniverseId) return
-  const universeId = session.user.activeUniverseId
+  const universeId = await getActiveUniverseId()
+  if (!universeId) return
   await prisma.matchParticipant.deleteMany({ where: { match: { show: { universeId } } } })
   await prisma.matchInterference.deleteMany({ where: { match: { show: { universeId } } } })
   await prisma.match.deleteMany({ where: { show: { universeId } } })
@@ -120,7 +122,7 @@ export default async function SettingsPage() {
   if (!session?.user?.id) redirect('/login')
 
   const userId = Number(session.user.id)
-  const activeUniverseId = session.user.activeUniverseId
+  const activeUniverseId = await getActiveUniverseId()
 
   const [stats, universes] = await Promise.all([
     getStats(activeUniverseId),

@@ -3,15 +3,16 @@ import { prisma } from '@db'
 import { auth } from '@/auth'
 import { MatchType, Stipulation, FinishType, CardPlacement } from "@/app/lib/types"
 import { NextResponse } from 'next/server'
+import { getActiveUniverseId } from '@/app/lib/session'
 
 export async function POST(req: Request) {
   try {
     const session = await auth()
-    if (!session?.user?.activeUniverseId) {
+    const universeId = getActiveUniverseId()
+    if (!universeId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const universeId = session.user.activeUniverseId
     const formData = await req.formData()
 
     const showId = parseInt(formData.get('showId') as string)

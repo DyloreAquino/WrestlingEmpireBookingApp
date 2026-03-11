@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { prisma } from '@db'
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
+import { getActiveUniverseId } from './lib/session'
 
 export const dynamic = 'force-dynamic'
 
@@ -65,9 +66,9 @@ async function getHomeData(universeId: number) {
 
 export default async function HomePage() {
   const session = await auth()
-  if (!session?.user?.activeUniverseId) redirect('/settings')
+  const universeId = await getActiveUniverseId()
+  if (!universeId) redirect('/settings')
 
-  const universeId = session.user.activeUniverseId
   const { currentChampions, featuredShow, label } = await getHomeData(universeId)
 
   return (

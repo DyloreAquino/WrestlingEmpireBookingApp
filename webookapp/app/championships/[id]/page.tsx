@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import AssignChampionModal from './AssignChampionModal'
+import { getActiveUniverseId } from '@/app/lib/session'
 
 const MONTH_LABELS: Record<string, string> = {
   JAN: 'Jan', FEB: 'Feb', MAR: 'Mar', APR: 'Apr',
@@ -83,9 +84,10 @@ export default async function ChampionshipPage({
   params: Promise<{ id: string }> | { id: string }
 }) {
   const session = await auth()
-  if (!session?.user?.activeUniverseId) redirect('/settings')
+  const universeId = await getActiveUniverseId()
+  if (!universeId) redirect('/settings')
 
-  const universeId = session.user.activeUniverseId
+  
   const { id } = await Promise.resolve(params)
   const championship = await getChampionship(id)
   if (!championship) notFound()
@@ -109,7 +111,8 @@ export default async function ChampionshipPage({
   async function assignChampion(formData: FormData) {
     'use server'
     const session = await auth()
-    if (!session?.user?.activeUniverseId) return
+    const activeUniverseId = await getActiveUniverseId()
+    if (!activeUniverseId) return
 
     const championshipId = parseInt(formData.get('championshipId') as string)
     const characterId    = parseInt(formData.get('characterId') as string)
@@ -119,7 +122,7 @@ export default async function ChampionshipPage({
 
     // Security check
     const champ = await prisma.championship.findUnique({ where: { id: championshipId } })
-    if (!champ || champ.universeId !== session.user.activeUniverseId) return
+    if (!champ || champ.universeId !== activeUniverseId) return
 
     const existing = await prisma.titleReign.findFirst({
       where: { championshipId, isCurrent: true }

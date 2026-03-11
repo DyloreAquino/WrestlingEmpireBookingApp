@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache'
 import { Role, Gender, Alignment, Division } from "@/app/lib/types"
 import RosterFilters from './RosterFilters'
 import CreateGroupForm from './CreateGroupForm'
+import { getActiveUniverseId } from '../lib/session'
 
 async function getRoster( universeId : number ) {
   const [characters, factions, tagTeams] = await Promise.all([
@@ -24,7 +25,8 @@ async function getRoster( universeId : number ) {
 async function createCharacter(formData: FormData) {
   'use server'
   const session = await auth()
-  if (!session?.user?.activeUniverseId) return
+  const activeUniverseId = await getActiveUniverseId()
+  if (!activeUniverseId) return
 
   const name = formData.get('name') as string
   const role = formData.get('role') as Role
@@ -34,7 +36,7 @@ async function createCharacter(formData: FormData) {
   const finisherName = formData.get('finisherName') as string || null
 
   const character = await prisma.character.create({
-    data: { name, role, gender, alignment, division, finisherName, injured: false, universeId: session.user.activeUniverseId }
+    data: { name, role, gender, alignment, division, finisherName, injured: false, universeId: activeUniverseId }
   })
 
   revalidatePath('/roster')
@@ -42,10 +44,11 @@ async function createCharacter(formData: FormData) {
 }
 
 export default async function RosterPage() {
-  const session = await auth()                          
-  if (!session?.user?.activeUniverseId) redirect('/settings')
+  const session = await auth()
+  const universeId = await getActiveUniverseId()
+  if (!universeId) redirect('/settings')
 
-  const universeId = session.user.activeUniverseId
+  
   
   const { characters, factions, tagTeams } = await getRoster(universeId)
 

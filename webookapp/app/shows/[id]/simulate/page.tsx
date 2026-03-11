@@ -5,6 +5,7 @@ import { notFound, redirect } from 'next/navigation'
 import { FinishType } from "@/app/lib/types"
 import Link from 'next/link'
 import SimulateMatchCard from './SimulateMatchCard'
+import { getActiveUniverseId } from '@/app/lib/session'
 
 async function getShowWithUnsimulatedMatches(id: string) {
   const show = await prisma.show.findUnique({
@@ -30,9 +31,10 @@ export default async function SimulatePage({
   params: Promise<{ id: string }> | { id: string }
 }) {
   const session = await auth()
-  if (!session?.user?.activeUniverseId) redirect('/settings')
+  const universeId = await getActiveUniverseId()
+  if (!universeId) redirect('/settings')
 
-  const universeId = session.user.activeUniverseId
+  
   const resolvedParams = await Promise.resolve(params)
   const show = await getShowWithUnsimulatedMatches(resolvedParams.id)
 

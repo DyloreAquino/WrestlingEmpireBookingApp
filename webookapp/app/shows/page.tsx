@@ -4,6 +4,7 @@ import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { Month, ShowType } from "@/app/lib/types"
 import ShowsCalendar from './ShowsCalendar'
+import { getActiveUniverseId } from '../lib/session'
 
 async function getShows(universeId: number) {
   return prisma.show.findMany({
@@ -19,7 +20,8 @@ async function getShows(universeId: number) {
 async function createShow(formData: FormData) {
   'use server'
   const session = await auth()
-  if (!session?.user?.activeUniverseId) return
+  const activeUniverseId = await getActiveUniverseId()
+  if (!activeUniverseId) return
 
   const type  = formData.get('type') as ShowType
   const month = formData.get('month') as Month
@@ -28,7 +30,7 @@ async function createShow(formData: FormData) {
   const title = formData.get('title') as string || null
 
   const show = await prisma.show.create({
-    data: { type, month, week, year, title, universeId: session.user.activeUniverseId }
+    data: { type, month, week, year, title, universeId: activeUniverseId }
   })
 
   redirect(`/shows/${show.id}`)
@@ -43,9 +45,8 @@ const MONTH_LABELS: Record<string, string> = {
 
 export default async function ShowsPage() {
   const session = await auth()
-  if (!session?.user?.activeUniverseId) redirect('/settings')
-
-  const universeId = session.user.activeUniverseId
+  const universeId = await getActiveUniverseId()
+  if (!universeId) redirect('/settings')
 
   const shows = await getShows(universeId)
 

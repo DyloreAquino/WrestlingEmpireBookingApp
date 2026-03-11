@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { Division, TitleGender } from "@/app/lib/types"
+import { getActiveUniverseId } from '../lib/session'
 
 const MAX_CHAMPIONSHIPS = 4
 
@@ -40,9 +41,10 @@ async function getChampionships(universeId: number) {
 async function createChampionship(formData: FormData) {
   'use server'
   const session = await auth()
-  if (!session?.user?.activeUniverseId) return
+  const universeId = await getActiveUniverseId()
+  if (!universeId) return
 
-  const universeId = session.user.activeUniverseId
+  
   const name     = formData.get('name') as string
   const division = formData.get('division') as Division
   const gender   = formData.get('gender') as TitleGender
@@ -71,9 +73,9 @@ async function deleteChampionship(formData: FormData) {
 
 export default async function ChampionshipsPage() {
   const session = await auth()
-  if (!session?.user?.activeUniverseId) redirect('/settings')
+  const universeId = await getActiveUniverseId()
+  if (!universeId) redirect('/settings')
 
-  const universeId = session.user.activeUniverseId
   const championships = await getChampionships(universeId)
   const canCreate = championships.length < MAX_CHAMPIONSHIPS
 

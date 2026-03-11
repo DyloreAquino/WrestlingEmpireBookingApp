@@ -6,6 +6,7 @@ import { notFound, redirect } from 'next/navigation'
 import { Alignment, Division, Gender, Role } from "@/app/lib/types"
 import DeleteCharacterButton from './DeleteCharacterButton'
 import UpdateCharacterButton from './UpdateCharacterButton'
+import { getActiveUniverseId } from '@/app/lib/session'
 
 async function getCharacter(id: string) {
   const characterId = parseInt(id)
@@ -41,9 +42,10 @@ export default async function CharacterPage({
   params: Promise<{ id: string }> | { id: string }
 }) {
   const session = await auth()
-  if (!session?.user?.activeUniverseId) redirect('/settings')
+  const universeId = await getActiveUniverseId()
+  if (!universeId) redirect('/settings')
 
-  const universeId = session.user.activeUniverseId
+  
   const resolvedParams = await Promise.resolve(params)
   const character = await getCharacter(resolvedParams.id)
 

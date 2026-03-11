@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { FinishType } from "@/app/lib/types"
 import ShowCard from './ShowCard'
+import { getActiveUniverseId } from '@/app/lib/session'
 
 async function getShow(id: string) {
   const showId = parseInt(id)
@@ -46,9 +47,10 @@ export default async function ShowPage({
   params: Promise<{ id: string }> | { id: string }
 }) {
   const session = await auth()
-  if (!session?.user?.activeUniverseId) redirect('/settings')
+  const universeId = await getActiveUniverseId()
+  if (!universeId) redirect('/settings')
 
-  const universeId = session.user.activeUniverseId
+  
   const resolvedParams = await Promise.resolve(params)
   const id = resolvedParams.id
 
