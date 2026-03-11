@@ -122,8 +122,35 @@ enum CardPlacement {
 // CORE MODELS
 //////////////////////
 
+model User {
+  id               Int         @id @default(autoincrement())
+  email            String      @unique
+  passwordHash     String
+  activeUniverseId Int?
+  universes        Universe[]
+  createdAt        DateTime    @default(now())
+}
+
+model Universe {
+  id          Int           @id @default(autoincrement())
+  name        String
+  userId      Int
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime      @default(now())
+
+  characters    Character[]
+  championships Championship[]
+  shows         Show[]
+  factions      Faction[]
+  tagTeams      TagTeam[]
+  rivalries     Rivalry[]
+  friendships   Friendship[]
+}
+
 model Character {
   id           Int          @id @default(autoincrement())
+  universeId   Int
+  universe     Universe     @relation(fields: [universeId], references: [id], onDelete: Cascade)
   name         String
   role         Role
   gender       Gender
@@ -132,7 +159,6 @@ model Character {
   finisherName String?
   injured      Boolean      @default(false)
 
-  // Faction, TagTeam, Rivalry, Friendship - one-to-many
   factionId    Int?
   faction      Faction?     @relation(fields: [factionId], references: [id])
 
@@ -145,7 +171,7 @@ model Character {
   friendshipId Int?
   friendship   Friendship?  @relation(fields: [friendshipId], references: [id])
 
-  matchEntries MatchParticipant[]
+  matchEntries  MatchParticipant[]
   interferences MatchInterference[]
   titleReigns   TitleReign[]
 
@@ -154,24 +180,29 @@ model Character {
 }
 
 model Championship {
-  id        Int           @id @default(autoincrement())
-  name      String
-  division  Division
-  gender    TitleGender
+  id           Int         @id @default(autoincrement())
+  universeId   Int
+  universe     Universe    @relation(fields: [universeId], references: [id], onDelete: Cascade)
+  name         String
+  division     Division
+  gender       TitleGender
 
   reigns    TitleReign[]
   matches   Match[]
 }
 
 model Show {
-  id        Int      @id @default(autoincrement())
-  title     String?
-  type      ShowType
-  month     Month
-  year      Int      @default(1)
-  location  String   @default("Parts Unknown")
-  week      Int
-  updatedAt DateTime @updatedAt @default(now())
+  id           Int      @id @default(autoincrement())
+  universeId   Int
+  universe     Universe @relation(fields: [universeId], references: [id], onDelete: Cascade)
+  title        String?
+  type         ShowType
+  month        Month
+  year         Int      @default(1)
+  location     String   @default("Parts Unknown")
+  week         Int
+  updatedAt    DateTime @updatedAt @default(now())
+  createdAt    DateTime @default(now())
 
   matches      Match[]
   titleReigns  TitleReign[]
@@ -240,26 +271,34 @@ model MatchInterference {
 //////////////////////
 
 model Faction {
-  id         Int          @id @default(autoincrement())
+  id         Int         @id @default(autoincrement())
+  universeId Int
+  universe   Universe    @relation(fields: [universeId], references: [id], onDelete: Cascade)
   name       String
   members    Character[]
 }
 
 model TagTeam {
-  id         Int          @id @default(autoincrement())
+  id         Int         @id @default(autoincrement())
+  universeId Int
+  universe   Universe    @relation(fields: [universeId], references: [id], onDelete: Cascade)
   name       String
   members    Character[]
 }
 
 model Rivalry {
-  id         Int          @id @default(autoincrement())
+  id         Int         @id @default(autoincrement())
+  universeId Int
+  universe   Universe    @relation(fields: [universeId], references: [id], onDelete: Cascade)
   name       String?
-  intensity  Int          @default(1)
+  intensity  Int         @default(1)
   members    Character[]
 }
 
 model Friendship {
-  id         Int          @id @default(autoincrement())
-  strength   Int          @default(1)
+  id         Int         @id @default(autoincrement())
+  universeId Int
+  universe   Universe    @relation(fields: [universeId], references: [id], onDelete: Cascade)
+  strength   Int         @default(1)
   members    Character[]
 }
