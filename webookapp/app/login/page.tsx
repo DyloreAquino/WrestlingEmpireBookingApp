@@ -24,10 +24,12 @@ export default function LoginPage() {
     })
 
     if (res?.error) {
-      setError('Invalid email or password')
-      setLoading(false)
+        setError('Invalid email or password')
+        setLoading(false)
     } else {
-      router.push('/')
+        // Small delay to let cookie propagate
+        await new Promise(r => setTimeout(r, 500))
+        router.push('/')
     }
   }
 
