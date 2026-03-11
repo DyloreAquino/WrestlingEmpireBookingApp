@@ -2,7 +2,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
-// @ts-expect-error - CSS module types not available
 import "./globals.css";
 
 const geistSans = Geist({
