@@ -1,7 +1,7 @@
 // app/shows/page.tsx
-import { prisma } from '@/app/lib/db'
+import { prisma } from '@db'
 import { redirect } from 'next/navigation'
-import { Month, ShowType } from '@prisma/client'
+import { Month, ShowType } from "@/generated/prisma/client"
 import ShowsCalendar from './ShowsCalendar'
 
 async function getShows() {
@@ -65,11 +65,6 @@ export default async function ShowsPage() {
       <div className="p-6 max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold mb-6 text-white">Shows</h1>
 
-        {shows.length === 0 ? (
-          <div className="text-center py-20 text-gray-500 bg-gray-800 rounded-lg border border-gray-700">
-            No shows yet — click an empty slot to create your first show.
-          </div>
-        ) : (
           <ShowsCalendar
             byYear={byYear}
             defaultMonth={defaultMonth}
@@ -77,7 +72,7 @@ export default async function ShowsPage() {
             monthLabels={MONTH_LABELS}
             createShow={createShow}
           />
-        )}
+
       </div>
     </div>
   )
