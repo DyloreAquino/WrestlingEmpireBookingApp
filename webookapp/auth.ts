@@ -32,26 +32,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     })
   ],
   callbacks: {
-    async jwt({ token, user }) {
-    if (user) {
+    jwt({ token, user }) {
+        if (user) {
         token.id = user.id
-        token.activeUniverseId = (user as any).activeUniverseId
-    }
-    if (token.id) {
-        const dbUser = await prisma.user.findUnique({
-        where: { id: Number(token.id) },
-        select: { activeUniverseId: true }
-        })
-        token.activeUniverseId = dbUser?.activeUniverseId ?? null
-    }
-    return token
+        }
+        return token
     },
     session({ session, token }) {
-      session.user.id = token.id as string
-      session.user.activeUniverseId = token.activeUniverseId as number | null
-      return session
+        session.user.id = token.id as string
+        return session
     }
-  },
+    },
   pages: {
     signIn: '/login',
   }
