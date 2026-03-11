@@ -1,5 +1,6 @@
 // app/roster/page.tsx
 import { prisma } from '@db'
+import { auth } from '@/auth'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
@@ -7,20 +8,23 @@ import { Role, Gender, Alignment, Division } from "@/app/lib/types"
 import RosterFilters from './RosterFilters'
 import CreateGroupForm from './CreateGroupForm'
 
-async function getRoster() {
+async function getRoster( universeId : number ) {
   const [characters, factions, tagTeams] = await Promise.all([
     prisma.character.findMany({
+      where: { universeId },
       orderBy: { name: 'asc' },
       include: { faction: true, tagTeam: true }
     }),
-    prisma.faction.findMany({ include: { members: true } }),
-    prisma.tagTeam.findMany({ include: { members: true } })
+    prisma.faction.findMany({ where: { universeId }, include: { members: true } }),
+    prisma.tagTeam.findMany({ where: { universeId }, include: { members: true } })
   ])
   return { characters, factions, tagTeams }
 }
 
 async function createCharacter(formData: FormData) {
   'use server'
+  const session = await auth()
+  if (!session?.user?.activeUniverseId) return
 
   const name = formData.get('name') as string
   const role = formData.get('role') as Role
@@ -30,7 +34,7 @@ async function createCharacter(formData: FormData) {
   const finisherName = formData.get('finisherName') as string || null
 
   const character = await prisma.character.create({
-    data: { name, role, gender, alignment, division, finisherName, injured: false }
+    data: { name, role, gender, alignment, division, finisherName, injured: false, universeId: session.user.activeUniverseId }
   })
 
   revalidatePath('/roster')
@@ -38,7 +42,12 @@ async function createCharacter(formData: FormData) {
 }
 
 export default async function RosterPage() {
-  const { characters, factions, tagTeams } = await getRoster()
+  const session = await auth()                          
+  if (!session?.user?.activeUniverseId) redirect('/settings')
+
+  const universeId = session.user.activeUniverseId
+  
+  const { characters, factions, tagTeams } = await getRoster(universeId)
 
   // Pass lean character list to CreateGroupForm (all characters, not just uninjured)
   const characterOptions = characters.map(c => ({

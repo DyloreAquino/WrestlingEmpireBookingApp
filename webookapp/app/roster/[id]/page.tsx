@@ -1,7 +1,8 @@
 // app/roster/[id]/page.tsx
 import { prisma } from '@db'
+import { auth } from '@/auth'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { Alignment, Division, Gender, Role } from "@/app/lib/types"
 import DeleteCharacterButton from './DeleteCharacterButton'
 import UpdateCharacterButton from './UpdateCharacterButton'
@@ -39,10 +40,17 @@ export default async function CharacterPage({
 }: {
   params: Promise<{ id: string }> | { id: string }
 }) {
+  const session = await auth()
+  if (!session?.user?.activeUniverseId) redirect('/settings')
+
+  const universeId = session.user.activeUniverseId
   const resolvedParams = await Promise.resolve(params)
   const character = await getCharacter(resolvedParams.id)
 
   if (!character) notFound()
+
+  // Security check — character must belong to user's universe
+  if (character.universeId !== universeId) notFound()
 
   const wins = character.matchEntries.filter(e => e.isWinner).length
   const total = character.matchEntries.length
@@ -50,7 +58,6 @@ export default async function CharacterPage({
   return (
     <div className="text-gray-100">
       <div className="p-6 max-w-6xl mx-auto">
-        {/* Breadcrumb */}
         <div className="mb-4 text-sm text-gray-400">
           <Link href="/roster" className="hover:text-white transition">Roster</Link>
           <span className="mx-2">→</span>
@@ -59,10 +66,7 @@ export default async function CharacterPage({
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          {/* Left Column */}
           <div className="lg:col-span-1 space-y-6">
-
-            {/* Character Header Card */}
             <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
               <h1 className="text-3xl font-bold text-white mb-2">{character.name}</h1>
               <div className="flex flex-wrap gap-2 mb-4">
@@ -93,7 +97,6 @@ export default async function CharacterPage({
               </div>
             </div>
 
-            {/* Stats Card */}
             <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
               <h2 className="text-lg font-bold text-white mb-4">Career Stats</h2>
               <div className="grid grid-cols-3 gap-4">
@@ -115,7 +118,6 @@ export default async function CharacterPage({
               <div className="mt-4 text-center text-gray-500 text-sm">{total} Total Matches</div>
             </div>
 
-            {/* Current Championships */}
             {character.titleReigns.filter(r => r.isCurrent).length > 0 && (
               <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
                 <h2 className="text-lg font-bold text-white mb-4">Current Championships</h2>
@@ -133,20 +135,15 @@ export default async function CharacterPage({
               </div>
             )}
 
-            {/* Edit Form */}
             <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
               <h2 className="text-lg font-bold text-white mb-4">Edit Character</h2>
-
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Name</label>
-                  <input
-                    id={`name-${character.id}`}
-                    type="text" defaultValue={character.name}
+                  <input id={`name-${character.id}`} type="text" defaultValue={character.name}
                     className="w-full bg-gray-900 border border-gray-600 text-white rounded p-3 focus:border-blue-500 focus:outline-none"
                   />
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Role</label>
                   <select id={`role-${character.id}`} defaultValue={character.role}
@@ -155,7 +152,6 @@ export default async function CharacterPage({
                     {Object.values(Role).map(r => <option key={r} value={r}>{r}</option>)}
                   </select>
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Gender</label>
                   <select id={`gender-${character.id}`} defaultValue={character.gender}
@@ -164,7 +160,6 @@ export default async function CharacterPage({
                     {Object.values(Gender).map(g => <option key={g} value={g}>{g}</option>)}
                   </select>
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Alignment</label>
                   <select id={`alignment-${character.id}`} defaultValue={character.alignment}
@@ -173,7 +168,6 @@ export default async function CharacterPage({
                     {Object.values(Alignment).map(a => <option key={a} value={a}>{a}</option>)}
                   </select>
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Division</label>
                   <select id={`division-${character.id}`} defaultValue={character.division}
@@ -182,40 +176,29 @@ export default async function CharacterPage({
                     {Object.values(Division).map(d => <option key={d} value={d}>{d}</option>)}
                   </select>
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Finisher Name</label>
-                  <input
-                    id={`finisherName-${character.id}`}
-                    type="text" defaultValue={character.finisherName || ''}
+                  <input id={`finisherName-${character.id}`} type="text" defaultValue={character.finisherName || ''}
                     placeholder="Optional"
                     className="w-full bg-gray-900 border border-gray-600 text-white rounded p-3 placeholder-gray-500 focus:border-blue-500 focus:outline-none"
                   />
                 </div>
-
                 <div className="flex items-center gap-3 p-3 bg-gray-900 rounded border border-gray-600">
-                  <input
-                    id={`injured-${character.id}`}
-                    type="checkbox" defaultChecked={character.injured}
+                  <input id={`injured-${character.id}`} type="checkbox" defaultChecked={character.injured}
                     className="w-5 h-5 rounded border-gray-600 text-red-600 focus:ring-red-500 bg-gray-700"
                   />
                   <label htmlFor={`injured-${character.id}`} className="text-gray-300 cursor-pointer">Injured</label>
                 </div>
-
                 <UpdateCharacterButton characterId={character.id} />
               </div>
-
               <div className="mt-3">
                 <DeleteCharacterButton characterId={character.id} characterName={character.name} />
               </div>
             </div>
-
           </div>
 
-          {/* Right Column - Match History */}
           <div className="lg:col-span-2">
             <h2 className="text-xl font-bold text-white mb-4">Match History ({character.matchEntries.length})</h2>
-
             {character.matchEntries.length === 0 ? (
               <div className="text-center py-12 text-gray-500 bg-gray-800 rounded-lg border border-gray-700">
                 No matches recorded yet.

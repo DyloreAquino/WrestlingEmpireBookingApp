@@ -1,44 +1,51 @@
 // app/api/matches/simulate/route.ts
 import { prisma } from '@db'
+import { auth } from '@/auth'
 import { NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 
 export async function POST(req: Request) {
   try {
+    const session = await auth()
+    if (!session?.user?.activeUniverseId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const universeId = session.user.activeUniverseId
     const { matchId, winnerIds, finish } = await req.json()
 
     if (!matchId || !winnerIds?.length || !finish) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Update match finish
-    await prisma.match.update({
-      where: { id: matchId },
-      data: { finish }
-    })
-
-    // Reset all participants
-    await prisma.matchParticipant.updateMany({
-      where: { matchId },
-      data: { isWinner: false }
-    })
-
-    // Set winners
-    await prisma.matchParticipant.updateMany({
-      where: { matchId, characterId: { in: winnerIds } },
-      data: { isWinner: true }
-    })
-
-    // Fetch match + show for title reign tracking
+    // Security check — match's show must belong to user's universe
     const match = await prisma.match.findUnique({
       where: { id: matchId },
       include: { show: true }
     })
 
-    if (match?.championshipId && match.show) {
+    if (!match || match.show.universeId !== universeId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    await prisma.match.update({
+      where: { id: matchId },
+      data: { finish }
+    })
+
+    await prisma.matchParticipant.updateMany({
+      where: { matchId },
+      data: { isWinner: false }
+    })
+
+    await prisma.matchParticipant.updateMany({
+      where: { matchId, characterId: { in: winnerIds } },
+      data: { isWinner: true }
+    })
+
+    if (match.championshipId && match.show) {
       const { month, week, year } = match.show
 
-      // End the current reign — stamp the end show date
       await prisma.titleReign.updateMany({
         where: { championshipId: match.championshipId, isCurrent: true },
         data: {
@@ -50,7 +57,6 @@ export async function POST(req: Request) {
         }
       })
 
-      // Start new reign with full show context
       await prisma.titleReign.create({
         data: {
           championshipId: match.championshipId,
@@ -65,10 +71,10 @@ export async function POST(req: Request) {
       })
     }
 
-    revalidatePath(`/shows/${match?.showId}/simulate`)
-    revalidatePath(`/shows/${match?.showId}`)
+    revalidatePath(`/shows/${match.showId}/simulate`)
+    revalidatePath(`/shows/${match.showId}`)
     revalidatePath(`/championships`)
-    if (match?.championshipId) {
+    if (match.championshipId) {
       revalidatePath(`/championships/${match.championshipId}`)
     }
     for (const id of winnerIds) {

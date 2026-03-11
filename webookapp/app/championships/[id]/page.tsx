@@ -1,7 +1,8 @@
 // app/championships/[id]/page.tsx
 import { prisma } from '@db'
+import { auth } from '@/auth'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import AssignChampionModal from './AssignChampionModal'
 
@@ -81,13 +82,20 @@ export default async function ChampionshipPage({
 }: {
   params: Promise<{ id: string }> | { id: string }
 }) {
+  const session = await auth()
+  if (!session?.user?.activeUniverseId) redirect('/settings')
+
+  const universeId = session.user.activeUniverseId
   const { id } = await Promise.resolve(params)
   const championship = await getChampionship(id)
   if (!championship) notFound()
 
-  // Fetch eligible wrestlers filtered by title gender
+  // Security check
+  if (championship.universeId !== universeId) notFound()
+
   const characters = await prisma.character.findMany({
     where: {
+      universeId,
       role: 'WRESTLER',
       ...(championship.gender !== 'ALL' ? { gender: championship.gender as any } : {}),
     },
@@ -100,13 +108,19 @@ export default async function ChampionshipPage({
 
   async function assignChampion(formData: FormData) {
     'use server'
+    const session = await auth()
+    if (!session?.user?.activeUniverseId) return
+
     const championshipId = parseInt(formData.get('championshipId') as string)
     const characterId    = parseInt(formData.get('characterId') as string)
     const startMonth     = formData.get('startMonth') as string
     const startWeek      = parseInt(formData.get('startWeek') as string)
     const startYear      = parseInt(formData.get('startYear') as string)
 
-    // Close existing current reign, setting its end date to the new reign's start
+    // Security check
+    const champ = await prisma.championship.findUnique({ where: { id: championshipId } })
+    if (!champ || champ.universeId !== session.user.activeUniverseId) return
+
     const existing = await prisma.titleReign.findFirst({
       where: { championshipId, isCurrent: true }
     })
@@ -123,7 +137,6 @@ export default async function ChampionshipPage({
       })
     }
 
-    // Create new reign
     await prisma.titleReign.create({
       data: {
         championshipId,
@@ -143,14 +156,12 @@ export default async function ChampionshipPage({
     <div className="text-gray-100">
       <div className="p-6 max-w-5xl mx-auto">
 
-        {/* Breadcrumb */}
         <div className="mb-4 text-sm text-gray-400">
           <Link href="/championships" className="hover:text-white transition">Championships</Link>
           <span className="mx-2">→</span>
           <span className="text-white">{championship.name}</span>
         </div>
 
-        {/* Header */}
         <div className="flex items-start justify-between gap-5 mb-8">
           <div className="flex items-start gap-5">
             <span className="text-5xl">🏆</span>
@@ -166,7 +177,6 @@ export default async function ChampionshipPage({
               </div>
             </div>
           </div>
-
           <AssignChampionModal
             championshipId={championship.id}
             characters={characters}
@@ -176,9 +186,7 @@ export default async function ChampionshipPage({
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          {/* Left: Reign History */}
           <div className="lg:col-span-2 space-y-6">
-
             <section>
               <h2 className="text-lg font-bold text-white mb-3">Current Champion</h2>
               {currentReign ? (
@@ -252,10 +260,8 @@ export default async function ChampionshipPage({
                 </div>
               )}
             </section>
-
           </div>
 
-          {/* Right: Title Matches */}
           <div className="lg:col-span-1">
             <h2 className="text-lg font-bold text-white mb-3">
               Title Matches <span className="text-gray-500 font-normal text-sm">({championship.matches.length})</span>

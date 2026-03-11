@@ -1,7 +1,8 @@
 // app/shows/[id]/page.tsx
 import { prisma } from '@db'
+import { auth } from '@/auth'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { FinishType } from "@/app/lib/types"
 import ShowCard from './ShowCard'
 
@@ -23,14 +24,15 @@ async function getShow(id: string) {
   })
 }
 
-async function getCharactersAndChampionships() {
+async function getCharactersAndChampionships(universeId: number) {
   const [characters, championships] = await Promise.all([
     prisma.character.findMany({
-      where: { injured: false },
+      where: { universeId, injured: false },
       orderBy: { name: 'asc' },
       select: { id: true, name: true, alignment: true, division: true, gender: true }
     }),
     prisma.championship.findMany({
+      where: { universeId },
       orderBy: { name: 'asc' },
       select: { id: true, name: true }
     })
@@ -43,20 +45,26 @@ export default async function ShowPage({
 }: {
   params: Promise<{ id: string }> | { id: string }
 }) {
+  const session = await auth()
+  if (!session?.user?.activeUniverseId) redirect('/settings')
+
+  const universeId = session.user.activeUniverseId
   const resolvedParams = await Promise.resolve(params)
   const id = resolvedParams.id
 
   const [show, { characters, championships }] = await Promise.all([
     getShow(id),
-    getCharactersAndChampionships()
+    getCharactersAndChampionships(universeId)
   ])
 
   if (!show) notFound()
 
+  // Security check — make sure this show belongs to the user's universe
+  if (show.universeId !== universeId) notFound()
+
   const hasUnfinished = show.matches.some(m => m.finish === FinishType.UNFINISHED)
   const hasMatches = show.matches.length > 0
 
-  // Collect all character IDs already booked in this show
   const bookedCharacterIds = [...new Set(
     show.matches.flatMap(m => m.participants.map(p => p.characterId))
   )]
@@ -65,14 +73,12 @@ export default async function ShowPage({
     <div className="text-gray-100">
       <div className="p-6 max-w-5xl mx-auto">
 
-        {/* Breadcrumb */}
         <div className="mb-4 text-sm text-gray-400">
           <Link href="/shows" className="hover:text-white transition">Shows</Link>
           <span className="mx-2">→</span>
           <span className="text-white">{show.title || `${show.month} Week ${show.week}`}</span>
         </div>
 
-        {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
             <div className="flex items-center gap-3 mb-2">
@@ -102,7 +108,6 @@ export default async function ShowPage({
           )}
         </div>
 
-        {/* Pyramid Card Layout */}
         <ShowCard
           showId={show.id}
           showType={show.type as 'TV' | 'PPV'}

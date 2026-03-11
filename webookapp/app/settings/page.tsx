@@ -26,6 +26,9 @@ async function switchUniverse(fd: FormData) {
   const session = await auth()
   if (!session?.user?.id) return
   const universeId = Number(fd.get('universeId'))
+  // Security check — universe must belong to this user
+  const universe = await prisma.universe.findUnique({ where: { id: universeId } })
+  if (!universe || universe.userId !== Number(session.user.id)) return
   await prisma.user.update({
     where: { id: Number(session.user.id) },
     data: { activeUniverseId: universeId }
@@ -41,7 +44,7 @@ async function getUniverses(userId: number) {
   })
 }
 
-async function getStats(userId: number, universeId: number | null) {
+async function getStats(universeId: number | null) {
   if (!universeId) return { wrestlers: 0, shows: 0, championships: 0, matches: 0, reigns: 0 }
   const [wrestlers, shows, championships, matches, reigns] = await Promise.all([
     prisma.character.count({ where: { universeId } }),
@@ -55,50 +58,59 @@ async function getStats(userId: number, universeId: number | null) {
 
 async function resetRoster() {
   'use server'
-  // Delete characters + cascade clears matchParticipants, interferences, titleReigns
-  await prisma.character.deleteMany()
-  await prisma.faction.deleteMany()
-  await prisma.tagTeam.deleteMany()
-  await prisma.rivalry.deleteMany()
-  await prisma.friendship.deleteMany()
+  const session = await auth()
+  if (!session?.user?.activeUniverseId) return
+  const universeId = session.user.activeUniverseId
+  await prisma.character.deleteMany({ where: { universeId } })
+  await prisma.faction.deleteMany({ where: { universeId } })
+  await prisma.tagTeam.deleteMany({ where: { universeId } })
+  await prisma.rivalry.deleteMany({ where: { universeId } })
+  await prisma.friendship.deleteMany({ where: { universeId } })
   revalidatePath('/settings')
   redirect('/settings')
 }
 
 async function resetShows() {
   'use server'
-  // Delete matches first (FK), then shows
-  await prisma.matchParticipant.deleteMany()
-  await prisma.matchInterference.deleteMany()
-  await prisma.match.deleteMany()
-  await prisma.show.deleteMany()
-  // Also clear reign show links
-  await prisma.titleReign.updateMany({ data: { showId: null } })
+  const session = await auth()
+  if (!session?.user?.activeUniverseId) return
+  const universeId = session.user.activeUniverseId
+  await prisma.matchParticipant.deleteMany({ where: { match: { show: { universeId } } } })
+  await prisma.matchInterference.deleteMany({ where: { match: { show: { universeId } } } })
+  await prisma.match.deleteMany({ where: { show: { universeId } } })
+  await prisma.titleReign.updateMany({ where: { championship: { universeId } }, data: { showId: null } })
+  await prisma.show.deleteMany({ where: { universeId } })
   revalidatePath('/settings')
   redirect('/settings')
 }
 
 async function resetChampionships() {
   'use server'
-  await prisma.titleReign.deleteMany()
-  await prisma.championship.deleteMany()
+  const session = await auth()
+  if (!session?.user?.activeUniverseId) return
+  const universeId = session.user.activeUniverseId
+  await prisma.titleReign.deleteMany({ where: { championship: { universeId } } })
+  await prisma.championship.deleteMany({ where: { universeId } })
   revalidatePath('/settings')
   redirect('/settings')
 }
 
 async function resetAll() {
   'use server'
-  await prisma.matchParticipant.deleteMany()
-  await prisma.matchInterference.deleteMany()
-  await prisma.match.deleteMany()
-  await prisma.titleReign.deleteMany()
-  await prisma.show.deleteMany()
-  await prisma.championship.deleteMany()
-  await prisma.character.deleteMany()
-  await prisma.faction.deleteMany()
-  await prisma.tagTeam.deleteMany()
-  await prisma.rivalry.deleteMany()
-  await prisma.friendship.deleteMany()
+  const session = await auth()
+  if (!session?.user?.activeUniverseId) return
+  const universeId = session.user.activeUniverseId
+  await prisma.matchParticipant.deleteMany({ where: { match: { show: { universeId } } } })
+  await prisma.matchInterference.deleteMany({ where: { match: { show: { universeId } } } })
+  await prisma.match.deleteMany({ where: { show: { universeId } } })
+  await prisma.titleReign.deleteMany({ where: { championship: { universeId } } })
+  await prisma.show.deleteMany({ where: { universeId } })
+  await prisma.championship.deleteMany({ where: { universeId } })
+  await prisma.character.deleteMany({ where: { universeId } })
+  await prisma.faction.deleteMany({ where: { universeId } })
+  await prisma.tagTeam.deleteMany({ where: { universeId } })
+  await prisma.rivalry.deleteMany({ where: { universeId } })
+  await prisma.friendship.deleteMany({ where: { universeId } })
   revalidatePath('/settings')
   redirect('/settings')
 }
@@ -106,28 +118,27 @@ async function resetAll() {
 export default async function SettingsPage() {
   const session = await auth()
   if (!session?.user?.id) redirect('/login')
-  
+
   const userId = Number(session.user.id)
   const activeUniverseId = session.user.activeUniverseId
 
   const [stats, universes] = await Promise.all([
-    getStats(userId, activeUniverseId),  // we'll update getStats too
+    getStats(activeUniverseId),
     getUniverses(userId)
   ])
 
   return (
     <div className="text-gray-100">
       <div className="p-6 max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold text-white mb-2">Settings</h1>
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-3xl font-bold text-white">Settings</h1>
+          <form action={async () => { 'use server'; await signOut({ redirectTo: '/login' }) }}>
+            <button type="submit" className="px-4 py-2 bg-red-700 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition">
+              Sign out
+            </button>
+          </form>
+        </div>
         <p className="text-gray-400 mb-8">Manage your universe data.</p>
-
-        <ResetPanel
-          stats={stats}
-          resetRoster={resetRoster}
-          resetShows={resetShows}
-          resetChampionships={resetChampionships}
-          resetAll={resetAll}
-        />
 
         <UniversePanel
           universes={universes}
@@ -136,11 +147,13 @@ export default async function SettingsPage() {
           createUniverse={createUniverse}
         />
 
-        <form action={async () => { 'use server'; await signOut({ redirectTo: '/login' }) }}>
-          <button type="submit" className="px-4 py-2 bg-red-700 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition">
-            Sign out
-          </button>
-        </form>
+        <ResetPanel
+          stats={stats}
+          resetRoster={resetRoster}
+          resetShows={resetShows}
+          resetChampionships={resetChampionships}
+          resetAll={resetAll}
+        />
       </div>
     </div>
   )

@@ -1,11 +1,13 @@
 // app/shows/page.tsx
 import { prisma } from '@db'
+import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { Month, ShowType } from "@/app/lib/types"
 import ShowsCalendar from './ShowsCalendar'
 
-async function getShows() {
+async function getShows(universeId: number) {
   return prisma.show.findMany({
+    where: { universeId },
     orderBy: [{ year: 'asc' }, { month: 'asc' }, { week: 'asc' }],
     include: {
       _count: { select: { matches: true } },
@@ -16,6 +18,8 @@ async function getShows() {
 
 async function createShow(formData: FormData) {
   'use server'
+  const session = await auth()
+  if (!session?.user?.activeUniverseId) return
 
   const type  = formData.get('type') as ShowType
   const month = formData.get('month') as Month
@@ -24,7 +28,7 @@ async function createShow(formData: FormData) {
   const title = formData.get('title') as string || null
 
   const show = await prisma.show.create({
-    data: { type, month, week, year, title }
+    data: { type, month, week, year, title, universeId: session.user.activeUniverseId }
   })
 
   redirect(`/shows/${show.id}`)
@@ -38,9 +42,15 @@ const MONTH_LABELS: Record<string, string> = {
 }
 
 export default async function ShowsPage() {
-  const shows = await getShows()
+  const session = await auth()
+  if (!session?.user?.activeUniverseId) redirect('/settings')
+
+  const universeId = session.user.activeUniverseId
+
+  const shows = await getShows(universeId)
 
   const mostRecentShow = await prisma.show.findFirst({
+    where: { universeId },
     orderBy: { updatedAt: 'desc' },
     select: { month: true, year: true }
   })
@@ -50,7 +60,6 @@ export default async function ShowsPage() {
   const defaultMonth = mostRecentShow?.month ?? currentCalendarMonth
   const defaultYear  = mostRecentShow?.year  ?? currentCalendarYear
 
-  // Group by year → month
   const byYear: Record<number, Record<string, typeof shows>> = {}
   for (const show of shows) {
     if (!byYear[show.year]) byYear[show.year] = {}
@@ -58,13 +67,10 @@ export default async function ShowsPage() {
     byYear[show.year][show.month].push(show)
   }
 
-  const years = Object.keys(byYear).map(Number)
-
   return (
     <div className="text-gray-100">
       <div className="p-6 max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold mb-6 text-white">Shows</h1>
-
           <ShowsCalendar
             byYear={byYear}
             defaultMonth={defaultMonth}
@@ -72,7 +78,6 @@ export default async function ShowsPage() {
             monthLabels={MONTH_LABELS}
             createShow={createShow}
           />
-
       </div>
     </div>
   )

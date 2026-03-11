@@ -1,11 +1,17 @@
 // app/api/characters/[id]/route.ts
 import { prisma } from '@db'
+import { auth } from '@/auth'
 import { NextResponse } from 'next/server'
 
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> | { id: string } }
 ) {
+  const session = await auth()
+  if (!session?.user?.activeUniverseId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const { id } = await Promise.resolve(params)
   const characterId = parseInt(id)
 
@@ -14,6 +20,12 @@ export async function PATCH(
   }
 
   try {
+    // Security check — character must belong to user's universe
+    const existing = await prisma.character.findUnique({ where: { id: characterId } })
+    if (!existing || existing.universeId !== session.user.activeUniverseId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const body = await req.json()
     const { name, role, gender, alignment, division, finisherName, injured } = body
 
@@ -33,11 +45,22 @@ export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> | { id: string } }
 ) {
+  const session = await auth()
+  if (!session?.user?.activeUniverseId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const { id } = await Promise.resolve(params)
   const characterId = parseInt(id)
 
   if (isNaN(characterId)) {
     return NextResponse.json({ error: 'Invalid ID' }, { status: 400 })
+  }
+
+  // Security check — character must belong to user's universe
+  const existing = await prisma.character.findUnique({ where: { id: characterId } })
+  if (!existing || existing.universeId !== session.user.activeUniverseId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   await prisma.character.delete({ where: { id: characterId } })

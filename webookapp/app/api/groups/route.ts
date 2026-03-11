@@ -1,9 +1,16 @@
 // app/api/groups/route.ts
 import { prisma } from '@db'
+import { auth } from '@/auth'
 import { NextResponse } from 'next/server'
 
 export async function POST(req: Request) {
   try {
+    const session = await auth()
+    if (!session?.user?.activeUniverseId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const universeId = session.user.activeUniverseId
     const { type, name, memberIds } = await req.json()
 
     if (!name || !memberIds || memberIds.length < 2) {
@@ -14,12 +21,12 @@ export async function POST(req: Request) {
 
     if (type === 'faction') {
       const faction = await prisma.faction.create({
-        data: { name, members: connectMembers }
+        data: { name, universeId, members: connectMembers }
       })
       return NextResponse.json(faction)
     } else if (type === 'tag_team') {
       const tagTeam = await prisma.tagTeam.create({
-        data: { name, members: connectMembers }
+        data: { name, universeId, members: connectMembers }
       })
       return NextResponse.json(tagTeam)
     }

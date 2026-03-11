@@ -1,10 +1,17 @@
 // app/api/matches/route.ts
 import { prisma } from '@db'
+import { auth } from '@/auth'
 import { MatchType, Stipulation, FinishType, CardPlacement } from "@/app/lib/types"
 import { NextResponse } from 'next/server'
 
 export async function POST(req: Request) {
   try {
+    const session = await auth()
+    if (!session?.user?.activeUniverseId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const universeId = session.user.activeUniverseId
     const formData = await req.formData()
 
     const showId = parseInt(formData.get('showId') as string)
@@ -24,6 +31,12 @@ export async function POST(req: Request) {
         { error: 'Invalid showId or not enough participants' },
         { status: 400 }
       )
+    }
+
+    // Security check — show must belong to user's universe
+    const show = await prisma.show.findUnique({ where: { id: showId } })
+    if (!show || show.universeId !== universeId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const match = await prisma.match.create({

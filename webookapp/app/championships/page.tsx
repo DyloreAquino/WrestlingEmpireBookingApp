@@ -1,5 +1,6 @@
 // app/championships/page.tsx
 import { prisma } from '@db'
+import { auth } from '@/auth'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
@@ -22,8 +23,9 @@ const GENDER_COLORS: Record<string, string> = {
   ALL:    'bg-purple-900 text-purple-200',
 }
 
-async function getChampionships() {
+async function getChampionships(universeId: number) {
   return prisma.championship.findMany({
+    where: { universeId },
     orderBy: { id: 'asc' },
     include: {
       reigns: {
@@ -37,16 +39,19 @@ async function getChampionships() {
 
 async function createChampionship(formData: FormData) {
   'use server'
+  const session = await auth()
+  if (!session?.user?.activeUniverseId) return
 
+  const universeId = session.user.activeUniverseId
   const name     = formData.get('name') as string
   const division = formData.get('division') as Division
   const gender   = formData.get('gender') as TitleGender
 
-  const count = await prisma.championship.count()
+  const count = await prisma.championship.count({ where: { universeId } })
   if (count >= MAX_CHAMPIONSHIPS) return
 
   await prisma.championship.create({
-    data: { name, division, gender }
+    data: { name, division, gender, universeId }
   })
 
   revalidatePath('/championships')
@@ -55,7 +60,6 @@ async function createChampionship(formData: FormData) {
 
 async function deleteChampionship(formData: FormData) {
   'use server'
-
   const id = parseInt(formData.get('id') as string)
   if (isNaN(id)) return
 
@@ -66,14 +70,17 @@ async function deleteChampionship(formData: FormData) {
 }
 
 export default async function ChampionshipsPage() {
-  const championships = await getChampionships()
+  const session = await auth()
+  if (!session?.user?.activeUniverseId) redirect('/settings')
+
+  const universeId = session.user.activeUniverseId
+  const championships = await getChampionships(universeId)
   const canCreate = championships.length < MAX_CHAMPIONSHIPS
 
   return (
     <div className="text-gray-100">
       <div className="p-6 max-w-5xl mx-auto">
 
-        {/* Header */}
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-white">Championships</h1>
           <p className="text-gray-400 text-sm mt-1">{championships.length} / {MAX_CHAMPIONSHIPS} titles created</p>
@@ -81,7 +88,6 @@ export default async function ChampionshipsPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
-          {/* Championship Cards */}
           <div className="lg:col-span-2 space-y-4">
             {championships.length === 0 ? (
               <div className="text-center py-20 text-gray-500 bg-gray-800 rounded-lg border border-gray-700">
@@ -108,26 +114,20 @@ export default async function ChampionshipsPage() {
                         </div>
                       </div>
 
-                      {/* Delete form */}
                       <form action={deleteChampionship}>
                         <input type="hidden" name="id" value={c.id} />
-                        <button
-                          type="submit"
+                        <button type="submit"
                           className="text-gray-600 hover:text-red-400 transition text-sm px-2 py-1 rounded hover:bg-gray-700"
                           title="Delete championship"
-                        >
-                          ✕
-                        </button>
+                        >✕</button>
                       </form>
                     </div>
 
-                    {/* Current champion */}
                     <div className="border-t border-gray-700 px-5 py-3">
                       {currentReign ? (
                         <div className="flex items-center gap-3">
                           <span className="text-xs text-gray-500 uppercase tracking-wide font-medium">Champion</span>
-                          <Link
-                            href={`/roster/${currentReign.character.id}`}
+                          <Link href={`/roster/${currentReign.character.id}`}
                             className="text-yellow-400 hover:text-yellow-300 font-semibold transition"
                           >
                             {currentReign.character.name}
@@ -144,10 +144,8 @@ export default async function ChampionshipsPage() {
                       )}
                     </div>
 
-                    {/* Reign history link */}
                     <div className="border-t border-gray-700 px-5 py-2">
-                      <Link
-                        href={`/championships/${c.id}`}
+                      <Link href={`/championships/${c.id}`}
                         className="text-xs text-blue-400 hover:text-blue-300 transition"
                       >
                         View reign history →
@@ -158,7 +156,6 @@ export default async function ChampionshipsPage() {
               })
             )}
 
-            {/* Empty slots */}
             {Array(Math.max(0, MAX_CHAMPIONSHIPS - championships.length)).fill(null).map((_, i) => (
               <div key={`empty-${i}`} className="bg-gray-800/40 rounded-lg border-2 border-dashed border-gray-700 p-8 text-center text-gray-600">
                 <div className="text-3xl mb-2 opacity-30">🏆</div>
@@ -167,7 +164,6 @@ export default async function ChampionshipsPage() {
             ))}
           </div>
 
-          {/* Create Form */}
           <div className="lg:col-span-1">
             <div className="bg-gray-800 rounded-lg border border-gray-700 p-6 sticky top-6">
               <h2 className="text-xl font-bold text-white mb-1">Create Championship</h2>
@@ -181,13 +177,11 @@ export default async function ChampionshipsPage() {
                 <form action={createChampionship} className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">Name *</label>
-                    <input
-                      type="text" name="name" required
+                    <input type="text" name="name" required
                       placeholder="e.g. World Heavyweight Championship"
                       className="w-full bg-gray-900 border border-gray-600 text-white rounded p-3 placeholder-gray-500 focus:border-blue-500 focus:outline-none"
                     />
                   </div>
-
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">Division</label>
                     <select name="division"
@@ -198,7 +192,6 @@ export default async function ChampionshipsPage() {
                       ))}
                     </select>
                   </div>
-
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">Gender</label>
                     <select name="gender"
@@ -209,7 +202,6 @@ export default async function ChampionshipsPage() {
                       ))}
                     </select>
                   </div>
-
                   <button type="submit"
                     className="w-full bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-3 rounded font-medium transition"
                   >

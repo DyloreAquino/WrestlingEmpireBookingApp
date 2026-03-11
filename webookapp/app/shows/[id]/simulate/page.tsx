@@ -1,5 +1,7 @@
+// app/shows/[id]/simulate/page.tsx
 import { prisma } from '@db'
-import { notFound } from 'next/navigation'
+import { auth } from '@/auth'
+import { notFound, redirect } from 'next/navigation'
 import { FinishType } from "@/app/lib/types"
 import Link from 'next/link'
 import SimulateMatchCard from './SimulateMatchCard'
@@ -27,14 +29,20 @@ export default async function SimulatePage({
 }: {
   params: Promise<{ id: string }> | { id: string }
 }) {
+  const session = await auth()
+  if (!session?.user?.activeUniverseId) redirect('/settings')
+
+  const universeId = session.user.activeUniverseId
   const resolvedParams = await Promise.resolve(params)
   const show = await getShowWithUnsimulatedMatches(resolvedParams.id)
+
+  // Security check
+  if (show.universeId !== universeId) notFound()
 
   return (
     <div className="text-gray-100">
       <div className="p-6 max-w-7xl mx-auto">
 
-        {/* Breadcrumb */}
         <div className="mb-4 text-sm text-gray-400">
           <Link href="/shows" className="hover:text-white transition">Shows</Link>
           <span className="mx-2">→</span>
@@ -45,7 +53,6 @@ export default async function SimulatePage({
           <span className="text-white">Simulate</span>
         </div>
 
-        {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold text-white">
@@ -57,8 +64,7 @@ export default async function SimulatePage({
                 : `${show.matches.length} match${show.matches.length !== 1 ? 'es' : ''} remaining`}
             </p>
           </div>
-          <Link
-            href={`/shows/${show.id}`}
+          <Link href={`/shows/${show.id}`}
             className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded font-medium transition text-sm"
           >
             ← Back to Show
@@ -70,8 +76,7 @@ export default async function SimulatePage({
             <div className="text-4xl mb-4">✅</div>
             <h2 className="text-2xl font-bold text-white mb-2">All matches simulated!</h2>
             <p className="text-gray-400 mb-6">Every match on this show has a result.</p>
-            <Link
-              href={`/shows/${show.id}`}
+            <Link href={`/shows/${show.id}`}
               className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 rounded font-medium transition"
             >
               ← Back to Show
